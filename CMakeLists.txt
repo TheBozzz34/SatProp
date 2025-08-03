@@ -65,8 +65,8 @@ add_executable(SatProp
         Propagator.h
         PropResults.h
         SGP4DataViewer.h
-        globe/GlobeViewer.h
-        globe/GlobeViewer.cpp
+        map/SatelliteMapWindow.cpp
+        map/SatelliteMapWindow.h
 )
 
 

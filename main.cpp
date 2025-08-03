@@ -13,7 +13,8 @@
 #include "SGP4DataViewer.h"
 #include "extern/GLFW/glfw3.h"
 #include "extern/glad/glad.h"
-#include "globe/GlobeViewer.h"
+#include "map/SatelliteMapWindow.h"
+
 
 // C interface wrapper
 #ifdef __cplusplus
@@ -60,7 +61,8 @@ struct AppState {
 
     SGP4DataViewer viewer;
 
-    GlobeViewer m_globeViewer;
+    SatelliteMapWindow satelliteMapWindow;
+
 };
 
 // why is sgp4prop so awful
@@ -126,10 +128,6 @@ int main(int argc, char* argv[])
     AppState appState;
     appState.statusMessage = std::string("Loaded: ") + sgp4DllInfo;
 
-    if (!appState.m_globeViewer.Initialize(800, 600)) {
-        err_logger->error("Failed to initialize GlobeViewer");
-        return false;
-    }
 
     // main window loop
     while (!glfwWindowShouldClose(window))
@@ -254,8 +252,7 @@ void RenderUI(AppState& state)
 
     if (state.statusMessage == "Processing complete. Results saved.") {
         state.viewer.Render();
-        state.m_globeViewer.Render();
-
+        state.satelliteMapWindow.render();
     }
 
     // about dialog
@@ -486,7 +483,7 @@ void ProcessSatellites(AppState& state)
         if (!dataSet)
         {
             state.viewer.SetData(results);
-            state.m_globeViewer.SetPropagationResults(results);
+            state.satelliteMapWindow.updateSatelliteData(results);
             dataSet = true;
         }
 
