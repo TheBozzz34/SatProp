@@ -29,17 +29,16 @@ extern "C"
 namespace SGP_IMPL {
     Propagator::Propagator() = default;
     Propagator::~Propagator() = default;
-    PropagationResults Propagator::RunOneSgp4Job(char* inFile)
+    PropagationResults Propagator::RunOneSgp4Job(char* inFile, double startTime, double stopTime, double stepSize)
 {
+        //debug log in doubles
+        printf("Start Time: %.2f, Stop Time: %.2f, Step Size: %.2f\n", startTime, stopTime, stepSize);
     const double EPSI = 0.00050;	/*	TIME TOLERANCE IN SEC.	*/
 
     PropagationResults results;
     results.overallSuccess = true;
     results.totalSatellites = 0;
 
-    double startTime;
-    double stopTime;
-    double stepSize;
 
     char  errMsg[LOGMSGLEN];
     char  valueStr[GETSETSTRLEN];
@@ -131,7 +130,9 @@ namespace SGP_IMPL {
         epochDs50UTC = DTGToUTC(valueStr); // Convert epoch string to days since 1950
 
         // compute start/stop times and step size from the input 6P card
-        CalcStartStopTime(epochDs50UTC, &startTime, &stopTime, &stepSize);
+        //CalcStartStopTime(epochDs50UTC, &startTime, &stopTime, &stepSize);
+        CalcStartStopTimeFromParams(epochDs50UTC, &startTime, &stopTime, &stepSize,
+                                    startTime, stopTime, stepSize);
 
         step = 0;
         ds50UTC = startTime;
@@ -347,7 +348,7 @@ void Propagator::PrintNodalApPer(FILE* fp, double mse, double n, double* nodalAp
 }
 
 
-// Calculate start/stop times and step size from 6P card (TimeFunc dll)
+// Calculate start/stop times and step size from 6P card, I don't know what a 6P card is
 void Propagator::CalcStartStopTime(double epoch, double* tStart, double* tStop, double* tStep)
 {
    int startFrEpoch, stopFrEpoch;
@@ -377,5 +378,17 @@ void Propagator::CalcStartStopTime(double epoch, double* tStart, double* tStop, 
    else
       *tStep = fabs(stepSize);
 }
+
+void Propagator::CalcStartStopTimeFromParams(double epoch, double* tStart, double* tStop, double* tStep,
+                                             double inputStart, double inputStop, double inputStep)
+    {
+        *tStart = inputStart;
+        *tStop = inputStop;
+
+        if(*tStart > *tStop)
+            *tStep = -fabs(inputStep);
+        else
+            *tStep = fabs(inputStep);
+    }
 
 } // SGP_IMPL

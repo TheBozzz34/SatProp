@@ -12,6 +12,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spdlog)
 
+# Fetch GLM
+FetchContent_Declare(
+        glm
+        GIT_REPOSITORY https://github.com/g-truc/glm.git
+        GIT_TAG        1.0.1  # or latest stable version
+)
+
+FetchContent_MakeAvailable(glm)
+
 
 add_compile_definitions(GLFW_STATIC)
 
@@ -55,6 +64,9 @@ add_executable(SatProp
         Propagator.cpp
         Propagator.h
         PropResults.h
+        SGP4DataViewer.h
+        globe/GlobeViewer.h
+        globe/GlobeViewer.cpp
 )
 
 
@@ -72,6 +84,7 @@ target_link_libraries(SatProp
         AstroFunc
         Tle
         Sgp4Prop
+        glm::glm
 )
 
 # copy DLLs to output folder after building

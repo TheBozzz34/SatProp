@@ -26,15 +26,19 @@ namespace SGP_IMPL {
         ~Propagator();
 
         // Main SGP4 propagation function
-        PropagationResults RunOneSgp4Job(char* inFile);
+        static PropagationResults RunOneSgp4Job(char* inFile, double startTime, double stopTime, double stepSize);
 
         // Print header function
         static void PrintHeader(FILE* fp, int fileType);
 
     private:
         // Helper functions that you'll likely need based on the implementation
-        void CalcStartStopTime(double epochDs50UTC, double* startTime,
+        static void CalcStartStopTime(double epochDs50UTC, double* startTime,
                               double* stopTime, double* stepSize);
+
+        static void CalcStartStopTimeFromParams(double epoch, double *tStart, double *tStop, double *tStep, double inputStart,
+                                                double inputStop, double inputStep);
+
         static void PrintPosVel(FILE* fp, double mse, double pos[3], double vel[3]);
 
         static void PrintLLH(FILE* fp, double mse, double llh[3], double pos[3]);

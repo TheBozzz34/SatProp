@@ -3,15 +3,17 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include "extern/spdlog/spdlog.h"
-#include "extern/spdlog/sinks/stdout_color_sinks.h"
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include "extern/imgui/imgui.h"
 #include "extern/imgui/backends/imgui_impl_glfw.h"
 #include "extern/imgui/backends/imgui_impl_opengl3.h"
 #define GLFW_STATIC
 #define GLFW_INCLUDE_NONE
+#include "SGP4DataViewer.h"
 #include "extern/GLFW/glfw3.h"
 #include "extern/glad/glad.h"
+#include "globe/GlobeViewer.h"
 
 // C interface wrapper
 #ifdef __cplusplus
@@ -55,6 +57,10 @@ struct AppState {
 
     // satellites loaded from tle file
     std::vector<std::string> loadedSatellites;
+
+    SGP4DataViewer viewer;
+
+    GlobeViewer m_globeViewer;
 };
 
 // why is sgp4prop so awful
@@ -109,6 +115,7 @@ int main(int argc, char* argv[])
     // load AstroStd DLLs
     LoadAstroStdDlls();
 
+
     // prints SGP4 DLL info
     char sgp4DllInfo[INFOSTRLEN];
     Sgp4GetInfo(sgp4DllInfo);
@@ -118,6 +125,11 @@ int main(int argc, char* argv[])
     // setup app state
     AppState appState;
     appState.statusMessage = std::string("Loaded: ") + sgp4DllInfo;
+
+    if (!appState.m_globeViewer.Initialize(800, 600)) {
+        err_logger->error("Failed to initialize GlobeViewer");
+        return false;
+    }
 
     // main window loop
     while (!glfwWindowShouldClose(window))
@@ -219,7 +231,7 @@ void RenderUI(AppState& state)
     ImGui::Begin("MainWindow", nullptr, window_flags);
 
     // Left panel for file ops and propagation controls
-    ImGui::BeginChild("LeftPanel", ImVec2(400, 0), true);
+    ImGui::BeginChild("LeftPanel", ImVec2(600, -25), true);
     ShowFileDialog(state);
     ImGui::Separator();
     ShowPropagationControls(state);
@@ -239,6 +251,12 @@ void RenderUI(AppState& state)
     // demo
     //if (state.showDemo)
         //ImGui::ShowDemoWindow(&state.showDemo);
+
+    if (state.statusMessage == "Processing complete. Results saved.") {
+        state.viewer.Render();
+        state.m_globeViewer.Render();
+
+    }
 
     // about dialog
     if (state.showAbout) {
@@ -444,6 +462,7 @@ FILE* OpenFile(const char* filename, const char* mode)
     return file;
 }
 
+
 void ProcessSatellites(AppState& state)
 {
     if (state.numSatellites == 0) {
@@ -461,14 +480,23 @@ void ProcessSatellites(AppState& state)
 
 
     try {
-        PropagationResults results = SGP_IMPL::Propagator().RunOneSgp4Job(state.inputFile);
+        PropagationResults results = SGP_IMPL::Propagator().RunOneSgp4Job(state.inputFile, state.startTime, state.stopTime, state.stepSize);
+        static bool dataSet = false;
+
+        if (!dataSet)
+        {
+            state.viewer.SetData(results);
+            state.m_globeViewer.SetPropagationResults(results);
+            dataSet = true;
+        }
+
         logger->info("Processed {} satellites", results.totalSatellites);
         if (results.overallSuccess) {
             for (const auto& sat : results.satellites) {
                 logger->info("Satellite: {}", sat.line1);
                 for (const auto& step : sat.timeSteps) {
-                    if (!step.hasError) {
-                        logger->info("Position: {}, {}, {}", step.pos[0], step.pos[1], step.pos[2]);
+                    if (step.hasError) {
+                        err_logger->error("Error in step: {}", step.errorMsg);
                     }
                 }
             }
@@ -480,6 +508,8 @@ void ProcessSatellites(AppState& state)
         state.isProcessing = false;
     }
 }
+
+
 
 // load dlls because AstroSTD is a mess and uses GetFnPtr wrappers
 void LoadAstroStdDlls()
